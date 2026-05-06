@@ -1,0 +1,240 @@
+{{- if .Values.networkPoliciesEnabled }}
+---
+####################################################################
+#                                                                  #
+#  Policy 1: Deny all ingress and egress for NATS pods by default  #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "nats.fullname" . }}-deny-all
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nats.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+####################################################################
+#                                                                  #
+#  Policy 2: Allow egress from NATS pods to K8s API server (443)  #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--{{ include "nats.fullname" . }}-allow-to-apiserver
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nats.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 443
+          protocol: TCP
+---
+####################################################################
+#                                                                  #
+#  Policy 3: Allow egress from NATS pods for DNS resolution        #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--{{ include "nats.fullname" . }}-to-dns
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+    purpose: dns
+spec:
+  podSelector:
+    matchLabels:
+      kyma-project.io/module: nats
+  policyTypes:
+    - Egress
+  egress:
+    # Standard DNS via kube-dns
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+    # DNS via kube-dns (Gardener kube-system namespace)
+    - ports:
+        - port: 8053
+          protocol: UDP
+        - port: 8053
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              gardener.cloud/purpose: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    # DNS via node-local-dns (Gardener)
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              gardener.cloud/purpose: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: node-local-dns
+---
+####################################################################
+#                                                                  #
+#  Policy 4: Allow NATS cluster internal peer-to-peer traffic      #
+#  NATS nodes communicate on port 6222 (cluster routing)           #
+#                                                                  #
+####################################################################
+{{- if .Values.cluster.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--{{ include "nats.fullname" . }}-cluster-peers
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nats.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              {{- include "nats.selectorLabels" . | nindent 14 }}
+      ports:
+        - port: {{ .Values.nats.ports.cluster }}
+          protocol: TCP
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              {{- include "nats.selectorLabels" . | nindent 14 }}
+      ports:
+        - port: {{ .Values.nats.ports.cluster }}
+          protocol: TCP
+{{- end }}
+---
+####################################################################
+#                                                                  #
+#  Policy 5: Allow ingress for Prometheus metrics scraping         #
+#  vmagent and customer scrapers use:                              #
+#  networking.kyma-project.io/metrics-scraping: allowed           #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--allow-{{ include "nats.fullname" . }}-metrics
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      kyma-project.io/module: nats
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              networking.kyma-project.io/metrics-scraping: allowed
+      ports:
+        - protocol: TCP
+          port: {{ .Values.nats.ports.metrics }}
+---
+####################################################################
+#                                                                  #
+#  Policy 6: Allow ingress for NATS client connections (4222)      #
+#  Consumers (e.g. Eventing module) connect to NATS on port 4222  #
+#  Label your workload with:                                       #
+#  networking.kyma-project.io/nats-access: allowed                #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--allow-{{ include "nats.fullname" . }}-client-access
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nats.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              networking.kyma-project.io/nats-access: allowed
+      ports:
+        - protocol: TCP
+          port: {{ .Values.nats.ports.client }}
+---
+####################################################################
+#                                                                  #
+#  Policy 7: Allow ingress from nats-manager operator to NATS      #
+#  monitoring port (8222) for health checks                        #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--allow-{{ include "nats.fullname" . }}-from-operator
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "nats.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "nats.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              control-plane: nats-manager
+      ports:
+        - protocol: TCP
+          port: {{ .Values.nats.ports.monitoring }}
+{{- end }}

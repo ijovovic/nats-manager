@@ -1,0 +1,174 @@
+---
+####################################################################
+#                                                                  #
+#  Policy 1: Deny all ingress and egress for nats-manager pod     #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: manager-deny-all
+  namespace: system
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: manager
+  policyTypes:
+    - Ingress
+    - Egress
+---
+####################################################################
+#                                                                  #
+#  Policy 2: Allow egress from nats-manager to K8s API (443)      #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--manager-allow-to-apiserver
+  namespace: system
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: manager
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - port: 443
+          protocol: TCP
+---
+####################################################################
+#                                                                  #
+#  Policy 3: Allow egress from nats-manager for DNS resolution     #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--manager-to-dns
+  namespace: system
+  labels:
+    purpose: dns
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: manager
+  policyTypes:
+    - Egress
+  egress:
+    # Standard DNS
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+    # DNS via kube-dns (Gardener kube-system namespace)
+    - ports:
+        - port: 8053
+          protocol: UDP
+        - port: 8053
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              gardener.cloud/purpose: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+    # DNS via node-local-dns (Gardener)
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+      to:
+        - namespaceSelector:
+            matchLabels:
+              gardener.cloud/purpose: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: node-local-dns
+---
+####################################################################
+#                                                                  #
+#  Policy 4: Allow ingress for Prometheus metrics scraping         #
+#  nats-manager exposes metrics on port 8080                       #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--allow-manager-metrics
+  namespace: system
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: manager
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kyma-system
+          podSelector:
+            matchLabels:
+              networking.kyma-project.io/metrics-scraping: allowed
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+####################################################################
+#                                                                  #
+#  Policy 5: Allow ingress to nats-manager health endpoints        #
+#  Health/readiness probes on port 8081 from kubelet               #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--allow-manager-health
+  namespace: system
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: manager
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8081
+---
+####################################################################
+#                                                                  #
+#  Policy 6: Allow egress from nats-manager to NATS pods          #
+#  monitoring port (8222) for health and state checks             #
+#                                                                  #
+####################################################################
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kyma-project.io--manager-allow-to-nats-monitoring
+  namespace: system
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: manager
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kyma-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nats
+      ports:
+        - protocol: TCP
+          port: 8222
