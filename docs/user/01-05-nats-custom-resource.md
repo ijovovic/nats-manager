@@ -53,6 +53,13 @@ Use the following sample CRs as guidance. Each can be applied immediately when y
 | **logging**  | object | JetStream defines configurations that are specific to NATS logging in NATS. |
 | **logging.&#x200b;debug**  | boolean | Debug allows debug logging. |
 | **logging.&#x200b;trace**  | boolean | Trace allows trace logging. |
+| **metrics**  | object | Metrics defines configurations for the NATS metrics exporter sidecar. |
+| **metrics.&#x200b;resources**  | object | Resources defines resources for the metrics exporter sidecar. When unset, the chart default is used. For clusters with many JetStream consumers, raising the memory limit (e.g. limits.memory=128Mi, requests.memory=64Mi) prevents the exporter from being OOMKilled. |
+| **metrics.&#x200b;resources.&#x200b;claims**  | \[\]object | Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This field depends on the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers. |
+| **metrics.&#x200b;resources.&#x200b;claims.&#x200b;name** (required) | string | Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container. |
+| **metrics.&#x200b;resources.&#x200b;claims.&#x200b;request**  | string | Request is the name chosen for a request in the referenced claim. If empty, everything from the claim is made available, otherwise only the result of this request. |
+| **metrics.&#x200b;resources.&#x200b;limits**  | map\[string\]\{integer or string\} | Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
+| **metrics.&#x200b;resources.&#x200b;requests**  | map\[string\]\{integer or string\} | Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. Requests cannot exceed Limits. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ |
 | **resources**  | object | Resources defines resources for NATS. |
 | **resources.&#x200b;claims**  | \[\]object | Claims lists the names of resources, defined in spec.resourceClaims, that are used by this container.  This field depends on the DynamicResourceAllocation feature gate.  This field is immutable. It can only be set for containers. |
 | **resources.&#x200b;claims.&#x200b;name** (required) | string | Name must match the name of one entry in pod.spec.resourceClaims of the Pod where this field is used. It makes that resource available inside a container. |

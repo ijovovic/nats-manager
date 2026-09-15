@@ -25,6 +25,10 @@ const (
 	ResourceRequestsMemKey           = "nats.resources.requests.memory"
 	ResourceLimitsCPUKey             = "nats.resources.limits.cpu"
 	ResourceLimitsMemKey             = "nats.resources.limits.memory"
+	MetricsResourceRequestsCPUKey    = "exporter.resources.requests.cpu"
+	MetricsResourceRequestsMemKey    = "exporter.resources.requests.memory"
+	MetricsResourceLimitsCPUKey      = "exporter.resources.limits.cpu"
+	MetricsResourceLimitsMemKey      = "exporter.resources.limits.memory"
 	NatsImageUrl                     = "global.natsImageUrl"
 	PrometheusNATSExporterImageUrl   = "global.prometheusNatsExporterImageUrl"
 	NATSServerConfigReloaderImageUrl = "global.natsServerConfigReloaderImageUrl"
@@ -111,6 +115,22 @@ func (m NATSManager) GenerateOverrides(spec *nmapiv1alpha1.NATSSpec, istioEnable
 	}
 	if spec.Resources.Limits.Memory() != nil {
 		overrides[ResourceLimitsMemKey] = spec.Resources.Limits.Memory().String()
+	}
+
+	// metrics exporter sidecar resources – only override the chart default when set.
+	// Cpu()/Memory() never return nil (they yield a zero Quantity when unset), so guard
+	// on IsZero() to leave the chart default untouched when the field is omitted.
+	if !spec.Metrics.Resources.Requests.Cpu().IsZero() {
+		overrides[MetricsResourceRequestsCPUKey] = spec.Metrics.Resources.Requests.Cpu().String()
+	}
+	if !spec.Metrics.Resources.Requests.Memory().IsZero() {
+		overrides[MetricsResourceRequestsMemKey] = spec.Metrics.Resources.Requests.Memory().String()
+	}
+	if !spec.Metrics.Resources.Limits.Cpu().IsZero() {
+		overrides[MetricsResourceLimitsCPUKey] = spec.Metrics.Resources.Limits.Cpu().String()
+	}
+	if !spec.Metrics.Resources.Limits.Memory().IsZero() {
+		overrides[MetricsResourceLimitsMemKey] = spec.Metrics.Resources.Limits.Memory().String()
 	}
 
 	// common labels to all the deployed resources.

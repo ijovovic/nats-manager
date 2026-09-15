@@ -118,11 +118,23 @@ type NATSSpec struct {
 	// +kubebuilder:default:={limits:{cpu:"500m",memory:"1Gi"}, requests:{cpu:"40m",memory:"64Mi"}}
 	Resources kcorev1.ResourceRequirements `json:"resources,omitempty"`
 
+	// Metrics defines configurations for the NATS metrics exporter sidecar.
+	Metrics `json:"metrics,omitempty"`
+
 	// Annotations allows to add annotations to NATS.
 	Annotations map[string]string `json:"annotations,omitempty"`
 
 	// Labels allows to add Labels to NATS.
 	Labels map[string]string `json:"labels,omitempty"`
+}
+
+// Metrics defines configurations for the NATS metrics exporter sidecar.
+type Metrics struct {
+	// Resources defines resources for the metrics exporter sidecar. When unset, the
+	// chart default is used. For clusters with many JetStream consumers, raising the
+	// memory limit (e.g. limits.memory=128Mi, requests.memory=64Mi) prevents the
+	// exporter from being OOMKilled.
+	Resources kcorev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // Cluster defines configurations that are specific to NATS clusters.
