@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	nmapiv1alpha1 "github.com/kyma-project/nats-manager/api/v1alpha1"
+	kcorev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -68,6 +69,25 @@ func resolveFileStorageSize(spec *nmapiv1alpha1.NATSSpec, cloudProvider string) 
 	return spec.FileStorage.Size, nil
 }
 
+// setMetricsResourceOverrides adds override entries for the metrics exporter sidecar
+// resources. Only fields that are set are added, so unset fields keep the chart default.
+// Cpu()/Memory() never return nil (they yield a zero Quantity when unset), so IsZero() is
+// used to detect omitted fields.
+func setMetricsResourceOverrides(overrides map[string]any, res kcorev1.ResourceRequirements) {
+	if !res.Requests.Cpu().IsZero() {
+		overrides[MetricsResourceRequestsCPUKey] = res.Requests.Cpu().String()
+	}
+	if !res.Requests.Memory().IsZero() {
+		overrides[MetricsResourceRequestsMemKey] = res.Requests.Memory().String()
+	}
+	if !res.Limits.Cpu().IsZero() {
+		overrides[MetricsResourceLimitsCPUKey] = res.Limits.Cpu().String()
+	}
+	if !res.Limits.Memory().IsZero() {
+		overrides[MetricsResourceLimitsMemKey] = res.Limits.Memory().String()
+	}
+}
+
 func (m NATSManager) GenerateOverrides(spec *nmapiv1alpha1.NATSSpec, istioEnabled bool,
 	rotatePassword bool, cloudProvider string,
 ) (map[string]any, error) {
@@ -118,20 +138,7 @@ func (m NATSManager) GenerateOverrides(spec *nmapiv1alpha1.NATSSpec, istioEnable
 	}
 
 	// metrics exporter sidecar resources – only override the chart default when set.
-	// Cpu()/Memory() never return nil (they yield a zero Quantity when unset), so guard
-	// on IsZero() to leave the chart default untouched when the field is omitted.
-	if !spec.Metrics.Resources.Requests.Cpu().IsZero() {
-		overrides[MetricsResourceRequestsCPUKey] = spec.Metrics.Resources.Requests.Cpu().String()
-	}
-	if !spec.Metrics.Resources.Requests.Memory().IsZero() {
-		overrides[MetricsResourceRequestsMemKey] = spec.Metrics.Resources.Requests.Memory().String()
-	}
-	if !spec.Metrics.Resources.Limits.Cpu().IsZero() {
-		overrides[MetricsResourceLimitsCPUKey] = spec.Metrics.Resources.Limits.Cpu().String()
-	}
-	if !spec.Metrics.Resources.Limits.Memory().IsZero() {
-		overrides[MetricsResourceLimitsMemKey] = spec.Metrics.Resources.Limits.Memory().String()
-	}
+	setMetricsResourceOverrides(overrides, spec.Metrics.Resources)
 
 	// common labels to all the deployed resources.
 	if len(spec.Labels) > 0 {
