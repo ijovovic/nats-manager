@@ -144,14 +144,14 @@ func Test_GenerateOverrides(t *testing.T) {
 						"memory": resource.MustParse("919Mi"),
 					},
 				}),
-				testutils.WithNATSMetricsResources(kcorev1.ResourceRequirements{
-					Limits: kcorev1.ResourceList{
-						"cpu":    resource.MustParse("60m"),
-						"memory": resource.MustParse("128Mi"),
+				testutils.WithNATSMetricsResources(nmapiv1alpha1.MetricsResources{
+					Limits: nmapiv1alpha1.MetricsResourceValues{
+						CPU:    resource.MustParse("60m"),
+						Memory: resource.MustParse("128Mi"),
 					},
-					Requests: kcorev1.ResourceList{
-						"cpu":    resource.MustParse("20m"),
-						"memory": resource.MustParse("64Mi"),
+					Requests: nmapiv1alpha1.MetricsResourceValues{
+						CPU:    resource.MustParse("20m"),
+						Memory: resource.MustParse("64Mi"),
 					},
 				}),
 				testutils.WithNATSLabels(map[string]string{

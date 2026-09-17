@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	nmapiv1alpha1 "github.com/kyma-project/nats-manager/api/v1alpha1"
-	kcorev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -71,20 +70,19 @@ func resolveFileStorageSize(spec *nmapiv1alpha1.NATSSpec, cloudProvider string) 
 
 // setMetricsResourceOverrides adds override entries for the metrics exporter sidecar
 // resources. Only fields that are set are added, so unset fields keep the chart default.
-// Cpu()/Memory() never return nil (they yield a zero Quantity when unset), so IsZero() is
-// used to detect omitted fields.
-func setMetricsResourceOverrides(overrides map[string]any, res kcorev1.ResourceRequirements) {
-	if !res.Requests.Cpu().IsZero() {
-		overrides[MetricsResourceRequestsCPUKey] = res.Requests.Cpu().String()
+// An unset Quantity is the zero value, so IsZero() is used to detect omitted fields.
+func setMetricsResourceOverrides(overrides map[string]any, res nmapiv1alpha1.MetricsResources) {
+	if !res.Requests.CPU.IsZero() {
+		overrides[MetricsResourceRequestsCPUKey] = res.Requests.CPU.String()
 	}
-	if !res.Requests.Memory().IsZero() {
-		overrides[MetricsResourceRequestsMemKey] = res.Requests.Memory().String()
+	if !res.Requests.Memory.IsZero() {
+		overrides[MetricsResourceRequestsMemKey] = res.Requests.Memory.String()
 	}
-	if !res.Limits.Cpu().IsZero() {
-		overrides[MetricsResourceLimitsCPUKey] = res.Limits.Cpu().String()
+	if !res.Limits.CPU.IsZero() {
+		overrides[MetricsResourceLimitsCPUKey] = res.Limits.CPU.String()
 	}
-	if !res.Limits.Memory().IsZero() {
-		overrides[MetricsResourceLimitsMemKey] = res.Limits.Memory().String()
+	if !res.Limits.Memory.IsZero() {
+		overrides[MetricsResourceLimitsMemKey] = res.Limits.Memory.String()
 	}
 }
 

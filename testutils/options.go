@@ -282,7 +282,7 @@ func WithNATSResources(resources kcorev1.ResourceRequirements) NATSOption {
 	}
 }
 
-func WithNATSMetricsResources(resources kcorev1.ResourceRequirements) NATSOption {
+func WithNATSMetricsResources(resources nmapiv1alpha1.MetricsResources) NATSOption {
 	return func(nats *nmapiv1alpha1.NATS) error {
 		nats.Spec.Metrics.Resources = resources
 		return nil
