@@ -131,7 +131,7 @@ type NATSSpec struct {
 // Metrics defines configurations for the NATS metrics exporter sidecar.
 type Metrics struct {
 	// Resources defines the CPU and memory requests and limits for the metrics exporter
-	// sidecar. When unset, the chart default is used. For clusters with many JetStream
+	// sidecar. When unset, the chart default applies. For clusters with many JetStream
 	// consumers, raising the memory limit (for example, limits.memory=128Mi) prevents the
 	// exporter from being OOMKilled.
 	Resources MetricsResources `json:"resources,omitempty"`
