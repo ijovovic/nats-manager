@@ -118,7 +118,7 @@ type NATSSpec struct {
 	// +kubebuilder:default:={limits:{cpu:"500m",memory:"1Gi"}, requests:{cpu:"40m",memory:"64Mi"}}
 	Resources kcorev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// Metrics defines configurations for the NATS metrics exporter sidecar.
+	// Metrics defines resource settings for the NATS metrics exporter sidecar.
 	Metrics `json:"metrics,omitempty"`
 
 	// Annotations allows to add annotations to NATS.
